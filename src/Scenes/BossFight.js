@@ -2664,6 +2664,7 @@ _transitionToCutscene2() {
     });
 
     let timeLeft = 10;
+
     this.deathCountdownEvent = this.time.addEvent({
         delay: 1000,
         repeat: 9,
