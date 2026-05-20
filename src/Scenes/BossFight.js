@@ -2809,11 +2809,11 @@ retryFromCheckpoint() {
     this.phase4WaveDone = false;
     this.phase4OrbBroken = false;
 
-    this.drawPlayerHpBar();
-    this.drawBossHealthBar();
+    this._drawPlayerHpBar();
+    this._drawBossHealthBar();
 
     this.time.delayedCall(500, () => {
-        this.startIntro();
+        this._startIntro();
     });
 }
     // ─────────────────────────────────────────────────────────────────────────
