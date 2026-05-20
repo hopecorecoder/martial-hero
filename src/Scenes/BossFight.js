@@ -2602,7 +2602,281 @@ _transitionToCutscene2() {
            this.showDeathScreen()
         }
     }
-   showDeathScreen() {
+_clearBossFightState() {
+    // stop physics/tween/event chaos first
+    this.physics.resume();
+
+    // remove the specific looping/timed refs you already use
+    const directTimers = [
+        'deathCountdownEvent',
+        'deathReturnTimer',
+        '_combatTimer',
+        'phase4LaserLoop',
+        'phase4BossAtkLoop'
+    ];
+
+    directTimers.forEach(key => {
+        if (this[key]) {
+            if (typeof this[key].remove === 'function') this[key].remove(false);
+            else if (typeof this[key].destroy === 'function') this[key].destroy();
+            this[key] = null;
+        }
+    });
+
+    // this scene uses a LOT of delayedCall/addEvent chains,
+    // so wipe all scene timer events before rebuilding the checkpoint state
+    if (this.time) {
+        this.time.removeAllEvents();
+    }
+
+    // kill all tweens so old orb/boss/dialogue/laser tweens don't keep running
+    if (this.tweens) {
+        this.tweens.killAll();
+    }
+
+    // detach update listener used by judgement, if active
+    if (this.jUpdateListener) {
+        this.events.off('update', this.jUpdateListener, this);
+        this.jUpdateListener = null;
+    }
+
+    // clear dialogue UI/state so old queued lines don't replay
+    this.dialogueQueue = [];
+    this.isShowingDialogue = false;
+
+    if (this.dialogueBox) { this.dialogueBox.destroy(); this.dialogueBox = null; }
+    if (this.nameText) { this.nameText.destroy(); this.nameText = null; }
+    if (this.dialogueText) { this.dialogueText.destroy(); this.dialogueText = null; }
+
+    // death UI cleanup
+    const deathUi = [
+        'deathOverlay',
+        'deathTitle',
+        'returnBtn',
+        'returnBtnText',
+        'deathHint'
+    ];
+
+    deathUi.forEach(key => {
+        if (this[key]) {
+            this[key].destroy();
+            this[key] = null;
+        }
+    });
+
+    this.isDeadScreenActive = false;
+    this.isReturningToTitle = false;
+    this.gamePaused = false;
+
+    // clear judgement UI/objects if active
+    if (typeof this.clearJudgementChargeBar === 'function') {
+        this.clearJudgementChargeBar();
+    }
+
+    if (this.jObjects?.length) {
+        this.jObjects.forEach(obj => {
+            if (obj?.active) obj.destroy();
+        });
+    }
+    this.jObjects = [];
+    this.jActive = false;
+    this.jWaitingInput = false;
+    this.jCharging = false;
+    this.jRoundsCompleted = 0;
+    this.jCurrentSeq = [];
+    this.jInputBuffer = [];
+    this.jHealBlocked = false;
+    this._jExecuteQueued = false;
+
+    // clear boss phase attack visuals
+    if (this.laserWarnings?.length) {
+        this.laserWarnings.forEach(w => {
+            if (w?.active) w.destroy();
+        });
+    }
+    this.laserWarnings = [];
+
+    if (this.activeLasers?.length) {
+        this.activeLasers.forEach(l => {
+            if (l?.active) l.destroy();
+        });
+    }
+    this.activeLasers = [];
+
+    // clear orb state
+    if (this.soulOrb) {
+        this.soulOrb.destroy();
+        this.soulOrb = null;
+    }
+    if (this.orbPrompt) {
+        this.orbPrompt.destroy();
+        this.orbPrompt = null;
+    }
+
+    this.orbPresses = 0;
+    this.orbMaxPresses = 8;
+    this.orbIsBroken = false;
+    this.isBreakingOrb = false;
+    this.phase4OrbBroken = false;
+
+    // clear mirror realm
+    if (this.mirrorBackground) {
+        this.mirrorBackground.destroy();
+        this.mirrorBackground = null;
+    }
+
+    if (this.altEgo) {
+        if (this.altEgo.frostParticles?.active) {
+            this.altEgo.frostParticles.destroy();
+        }
+        if (this.altEgo.hpBg?.active) this.altEgo.hpBg.destroy();
+        if (this.altEgo.hpBar?.active) this.altEgo.hpBar.destroy();
+        if (this.altEgo.sprite?.active) this.altEgo.sprite.destroy();
+        this.altEgo = null;
+    }
+
+    this.inMirrorRealm = false;
+    this.playerStrengthBuff = false;
+    this.playerDamageMultiplier = 1;
+
+    // clear enemies
+    if (this.enemies?.length) {
+        this.enemies.forEach(e => {
+            if (!e) return;
+            if (e.burnParticles?.active) e.burnParticles.destroy();
+            if (e.alertSprite?.active) e.alertSprite.destroy();
+            if (e.hpBg?.active) e.hpBg.destroy();
+            if (e.hpBar?.active) e.hpBar.destroy();
+            if (e.sprite?.active) e.sprite.destroy();
+        });
+    }
+    this.enemies = [];
+
+    // clear fireballs
+    if (this.fireballs?.length) {
+        this.fireballs.forEach(f => {
+            if (f?.sprite?.active) f.sprite.destroy();
+            else if (f?.active) f.destroy();
+        });
+    }
+    this.fireballs = [];
+
+    // clear potions
+    if (this.potions?.length) {
+        this.potions.forEach(p => {
+            if (p?.active) p.destroy();
+        });
+    }
+    this.potions = [];
+
+    // reset core phase state
+    this.currentPhase = 'intro';
+    this.laserRound = 0;
+    this.maxLaserRounds = 5;
+    this.hasSummoned = false;
+
+    this.phase4Wave = 0;
+    this.phase4WaveDone = false;
+    this.phase4Wave2Queue = [];
+    this.phase4Wave2SpawnPending = false;
+    this.phase4Wave2ActiveCap = 10;
+
+    this.bossPhase = 1;
+    this.bossCurrentHp = this.bossHpPerPhase;
+    this.bossInvulnerable = false;
+
+    // restore world visuals
+    if (this.bg) this.bg.setVisible(true);
+    if (this.boss) {
+        this.boss.setVisible(true);
+        this.boss.setActive(true);
+        this.boss.setAlpha(1);
+        this.boss.clearTint();
+    }
+    if (this.bossHpGraphics) this.bossHpGraphics.setVisible(true);
+    if (this.bossNameText) this.bossNameText.setVisible(true);
+
+    // boss animation/body reset
+    if (this.boss?.body) {
+        this.boss.body.enable = true;
+        this.boss.body.setAllowGravity(false);
+        this.boss.body.setImmovable(true);
+        this.boss.setVelocity(0, 0);
+    }
+    if (this.boss?.anims) {
+        this.boss.anims.play('boss_idle', true);
+    }
+
+    // player reset-ish combat flags
+    if (this.player) {
+        this.player.clearTint();
+        this.player.setAlpha(1);
+        this.player.setVelocity(0, 0);
+        this.player.setVisible(true);
+        if (this.player.body) this.player.body.enable = true;
+        this.player.anims.play('idle', true);
+    }
+
+    this.playerInvincible = false;
+    this.inCombat = false;
+    this.isAttacking = false;
+    this.isCharging = false;
+    this.chargeAmount = 0;
+    this.isDashing = false;
+    this.dashCooldown = 0;
+    this.fireballCooldown = 0;
+    this.judgementCooldown = 0;
+
+    this.physics.resume();
+},
+
+_resetToBossCheckpoint() {
+    this._clearBossFightState();
+
+    // restore player
+    this.playerHealth = this.playerMaxHealth;
+    this._drawPlayerHpBar();
+
+    if (this.player) {
+        this.player.setPosition(400, 450);
+        this.player.setVelocity(0, 0);
+        this.player.setFlipX(false);
+    }
+
+    // restore boss
+    this.bossPhase = 1;
+    this.bossCurrentHp = this.bossHpPerPhase;
+    this.bossInvulnerable = false;
+    this._drawBossHealthBar();
+
+    if (this.boss) {
+        this.boss.setPosition(400, 220);
+        this.boss.setVelocity(0, 0);
+        this.boss.clearTint();
+        this.boss.setAlpha(1);
+        this.boss.anims.play('boss_idle', true);
+    }
+
+    // restart ONLY the intended intro chain
+    this.time.delayedCall(500, () => {
+        this._startIntro();
+    });
+},
+
+retryFromCheckpoint() {
+    if (this.isRetryingFromCheckpoint) return;
+    this.isRetryingFromCheckpoint = true;
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+
+    this.time.delayedCall(260, () => {
+        this._resetToBossCheckpoint();
+        this.cameras.main.fadeIn(250, 0, 0, 0);
+        this.isRetryingFromCheckpoint = false;
+    });
+},
+
+showDeathScreen() {
     if (this.isDeadScreenActive) return;
     this.isDeadScreenActive = true;
 
@@ -2660,160 +2934,24 @@ _transitionToCutscene2() {
     });
 
     this.returnBtn.on('pointerdown', () => {
-    this.retryFromCheckpoint();
-});
-
-this.deathReturnTimer = this.time.delayedCall(10000, () => {
-    this.retryFromCheckpoint();
-});
-}
-
-retryFromCheckpoint() {
-    if (this.isRetryingFromCheckpoint) return;
-    this.isRetryingFromCheckpoint = true;
-
-    if (this.deathCountdownEvent) {
-        this.deathCountdownEvent.remove();
-        this.deathCountdownEvent = null;
-    }
-
-    if (this.deathReturnTimer) {
-        this.deathReturnTimer.remove();
-        this.deathReturnTimer = null;
-    }
-
-    if (this.combatTimer) {
-        this.combatTimer.remove();
-        this.combatTimer = null;
-    }
-
-    this.cameras.main.fadeOut(250, 0, 0, 0);
-
-    this.time.delayedCall(260, () => {
-        this._resetToBossCheckpoint();
-        this.cameras.main.fadeIn(250, 0, 0, 0);
-        this.isRetryingFromCheckpoint = false;
+        this.retryFromCheckpoint();
     });
-}
-    _resetToBossCheckpoint() {
-    this.gamePaused = false;
-    this.physics.resume();
 
-    if (this.deathOverlay) this.deathOverlay.destroy();
-    if (this.deathTitle) this.deathTitle.destroy();
-    if (this.returnBtn) this.returnBtn.destroy();
-    if (this.returnBtnText) this.returnBtnText.destroy();
-    if (this.deathHint) this.deathHint.destroy();
+    let timeLeft = 10;
 
-    this.deathOverlay = null;
-    this.deathTitle = null;
-    this.returnBtn = null;
-    this.returnBtnText = null;
-    this.deathHint = null;
-    this.isDeadScreenActive = false;
-    this.isReturningToTitle = false;
+    this.deathCountdownEvent = this.time.addEvent({
+        delay: 1000,
+        repeat: 9,
+        callback: () => {
+            timeLeft--;
+            if (this.deathHint?.active) {
+                this.deathHint.setText(`Retrying automatically in ${timeLeft}...`);
+            }
+        }
+    });
 
-    if (this.dialogueBox) this.dialogueBox.destroy();
-    if (this.nameText) this.nameText.destroy();
-    if (this.dialogueText) this.dialogueText.destroy();
-    this.dialogueBox = null;
-    this.nameText = null;
-    this.dialogueText = null;
-    this.dialogueQueue = [];
-    this.isShowingDialogue = false;
-
-    if (this.soulOrb) this.soulOrb.destroy();
-    if (this.orbPrompt) this.orbPrompt.destroy();
-    this.soulOrb = null;
-    this.orbPrompt = null;
-    this.orbPresses = 0;
-    this.orbIsBroken = false;
-    this.isBreakingOrb = false;
-
-    if (this.mirrorBackground) this.mirrorBackground.destroy();
-    if (this.altEgo?.sprite?.active) this.altEgo.sprite.destroy();
-    this.mirrorBackground = null;
-    this.altEgo = null;
-    this.inMirrorRealm = false;
-
-    this.stopPhase4Loops?.();
-
-    if (this.activeLasers?.length) {
-        this.activeLasers.forEach(l => { if (l?.active) l.destroy(); });
-    }
-    this.activeLasers = [];
-
-    if (this.laserWarnings?.length) {
-        this.laserWarnings.forEach(w => { if (w?.active) w.destroy(); });
-    }
-    this.laserWarnings = [];
-
-    if (this.enemies?.length) {
-        this.enemies.forEach(e => {
-            if (e?.hpBg) e.hpBg.destroy();
-            if (e?.hpBar) e.hpBar.destroy();
-            if (e?.alertSprite?.active) e.alertSprite.destroy();
-            if (e?.burnParticles?.active) e.burnParticles.destroy();
-            if (e?.sprite?.active) e.sprite.destroy();
-        });
-    }
-    this.enemies = [];
-
-    if (this.potions?.length) {
-        this.potions.forEach(p => {
-            if (p?.active) p.destroy();
-        });
-    }
-    this.potions = [];
-
-    if (this.fireballs?.length) {
-        this.fireballs.forEach(f => {
-            if (f?.active) f.destroy();
-        });
-    }
-    this.fireballs = [];
-
-    this.player.clearTint();
-    this.player.setAlpha(1);
-    this.player.setVisible(true);
-    this.player.body.enable = true;
-    this.player.setVelocity(0, 0);
-    this.player.setPosition(400, 450);
-
-    this.playerHealth = this.playerMaxHealth;
-    this.playerInvincible = false;
-    this.inCombat = false;
-    this.isAttacking = false;
-    this.isCharging = false;
-    this.isDashing = false;
-    this.chargeAmount = 0;
-    this.playerDamageMultiplier = 1;
-    this.playerStrengthBuff = false;
-
-    this.boss.setVisible(true);
-    this.boss.setActive(true);
-    this.boss.body.enable = true;
-    this.boss.setAlpha(1);
-    this.boss.setPosition(400, 220);
-    this.boss.setTint(0xffffff);
-    this.boss.clearTint();
-    this.boss.anims.play('bossidle', true);
-
-    this.bossPhase = 1;
-    this.bossCurrentHp = this.bossHpPerPhase;
-    this.bossInvulnerable = false;
-    this.currentPhase = 'intro';
-    this.laserRound = 0;
-    this.hasSummoned = false;
-    this.phase4Wave = 0;
-    this.phase4WaveDone = false;
-    this.phase4OrbBroken = false;
-
-    this._drawPlayerHpBar();
-    this._drawBossHealthBar();
-
-    this.time.delayedCall(500, () => {
-        this._startIntro();
+    this.deathReturnTimer = this.time.delayedCall(10000, () => {
+        this.retryFromCheckpoint();
     });
 }
     // ─────────────────────────────────────────────────────────────────────────
