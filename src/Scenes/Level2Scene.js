@@ -445,7 +445,7 @@ export class Level2Scene extends Phaser.Scene {
             up:       Phaser.Input.Keyboard.KeyCodes.SPACE,
             down:     Phaser.Input.Keyboard.KeyCodes.S,
             fireball: Phaser.Input.Keyboard.KeyCodes.F,
-            strike:   Phaser.Input.Keyboard.KeyCodes.R
+            strike:   Phaser.Input.Keyboard.KeyCodes.W
         });
 
         // ── Player ───────────────────────────────────────────────────────────
@@ -602,6 +602,7 @@ export class Level2Scene extends Phaser.Scene {
         this.judgementIcon.setScrollFactor(0).setDepth(20);
         this.judgementIcon.setVisible(false);
 
+      
 
         // ── Camera / colliders ────────────────────────────────────────────────
         this.player.anims.play('idle');
@@ -2090,15 +2091,15 @@ export class Level2Scene extends Phaser.Scene {
             .setScale(3).setScrollFactor(0).setDepth(52);
     
         const specs = [
-            'Hold R to channel Strike of Judgement',
+            'Hold W to channel Strike of Judgement',
             '',
             'Complete 8 sequence rounds for full power',
-            'Execute nearby • 90% to all on screen',
+            'Use the power of justice to strike your enemies',
             'Failed sequence: partial judgement',
             '',
-            'Faster minigame • Auto-release at round 8',
             '',
-            'Cooldown: 50 seconds'
+            '',
+            'Cooldown: 40 seconds'
         ];
     
         const specsText = this.add.text(panelX, panelY + 80, specs.join('\n'), {

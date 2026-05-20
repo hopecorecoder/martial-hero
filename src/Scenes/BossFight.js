@@ -749,7 +749,7 @@ export class BossFightScene extends Phaser.Scene {
             up:       Phaser.Input.Keyboard.KeyCodes.SPACE,
             down:     Phaser.Input.Keyboard.KeyCodes.S,
             fireball: Phaser.Input.Keyboard.KeyCodes.F,
-            strike:   Phaser.Input.Keyboard.KeyCodes.R,
+            strike:   Phaser.Input.Keyboard.KeyCodes.W,
             breakOrb:   Phaser.Input.Keyboard.KeyCodes.T,
         });
 
@@ -860,7 +860,26 @@ export class BossFightScene extends Phaser.Scene {
         this.judgementIcon.setScale(1.4);
         this.judgementIcon.setScrollFactor(0).setDepth(20);
         
-
+        const makeSkillKeycap = (x, y, label, tint = '#ffffff') => {
+            const bg = this.add.rectangle(x, y, 20, 16, 0x000000, 0.72)
+                .setStrokeStyle(1, 0xffffff, 0.35)
+                .setScrollFactor(0)
+                .setDepth(22);
+        
+            const txt = this.add.text(x, y, label, {
+                fontSize: '11px',
+                fill: tint,
+                stroke: '#000000',
+                strokeThickness: 2,
+                fontStyle: 'bold',
+                fontFamily: 'monospace'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(23);
+        
+            return { bg, txt };
+        };
+        
+        this.judgementKeycap = makeSkillKeycap(this.judgementIcon.x, this.judgementIcon.y + 24, 'W', '#f5e7a1');
+        this.fireballKeycap = makeSkillKeycap(this.fireballIcon.x, this.fireballIcon.y + 24, 'F', '#ffb36b');
 
         // ── Camera / colliders ────────────────────────────────────────────────
         this.player.anims.play('idle');

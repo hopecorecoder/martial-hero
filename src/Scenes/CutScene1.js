@@ -200,23 +200,26 @@ export class Cutscene1 extends Phaser.Scene {
         this.typeEvent.remove(false);
         this.typeEvent = null;
       }
-
+  
       target.setText('');
       let i = 0;
-
-      this.typeEvent = this.time.addEvent({
+  
+      const evt = this.time.addEvent({
         delay: speed,
         loop: true,
         callback: () => {
           i += 1;
           target.setText(text.slice(0, i));
+  
           if (i >= text.length) {
-            this.typeEvent.remove(false);
-            this.typeEvent = null;
+            evt.remove(false);
+            if (this.typeEvent === evt) this.typeEvent = null;
             resolve();
           }
         }
       });
+  
+      this.typeEvent = evt;
     });
   }
 
