@@ -2597,7 +2597,7 @@ _transitionToCutscene2() {
         this.time.delayedCall(650, () => { this.playerInvincible = false; });
         if (this.playerHealth <= 0) {
             
-           showDeathScreen()
+           this.showDeathScreen()
         }
     }
     showDeathScreen() {

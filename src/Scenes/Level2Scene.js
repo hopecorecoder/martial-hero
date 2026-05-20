@@ -907,7 +907,7 @@ export class Level2Scene extends Phaser.Scene {
        
             if (this.playerHealth <= 0) {
             
-                showDeathScreen()
+                this.showDeathScreen()
              }
          }
          

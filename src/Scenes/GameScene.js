@@ -333,7 +333,7 @@ this.time.delayedCall(100, () => { this.inputActive = true; });
         this.time.delayedCall(600, () => { this.playerInvincible = false; });
         if (this.playerHealth <= 0) {
             
-            showDeathScreen()
+            this.showDeathScreen()
          }
      }
      showDeathScreen() {
