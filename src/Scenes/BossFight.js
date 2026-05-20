@@ -2694,7 +2694,7 @@ _transitionToCutscene2() {
         this.cameras.main.fadeOut(350, 0, 0, 0);
     
         this.time.delayedCall(360, () => {
-            this.scene.start('TitleScene');
+            this.scene.start('BossFightScene');
         });
     }
     // ─────────────────────────────────────────────────────────────────────────
