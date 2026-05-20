@@ -666,7 +666,9 @@ export class BossFightScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BossFightScene' });
     }
-    
+    init(data) {
+    this.checkpoint = data?.checkpoint || null;
+    }
     preload() {
 
         this.load.setPath('assets');
@@ -2600,103 +2602,104 @@ _transitionToCutscene2() {
            this.showDeathScreen()
         }
     }
-    showDeathScreen() {
-        if (this.isDeadScreenActive) return;
-        this.isDeadScreenActive = true;
-    
-        this.gamePaused = true;
-        this.physics.pause();
-    
-        if (this.player?.body) {
-            this.player.setVelocity(0, 0);
-        }
-    
-        const cam = this.cameras.main;
-        const cx = cam.width / 2;
-        const cy = cam.height / 2;
-    
-        this.deathOverlay = this.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.55)
-            .setScrollFactor(0)
-            .setDepth(200);
-    
-        this.deathTitle = this.add.text(cx, cy - 70, 'YOU DIED', {
-            fontSize: '64px',
-            fill: '#d01818',
-            stroke: '#000000',
-            strokeThickness: 6,
-            fontStyle: 'bold',
-            fontFamily: 'serif'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
-    
-        this.returnBtn = this.add.rectangle(cx, cy + 18, 320, 62, 0x1a1a1a, 0.9)
-            .setStrokeStyle(3, 0xffffff)
-            .setInteractive({ useHandCursor: true })
-            .setScrollFactor(0)
-            .setDepth(201);
-    
-        this.returnBtnText = this.add.text(cx, cy + 18, 'RETURN TO TITLE', {
-            fontSize: '24px',
-            fill: '#ffffff',
-            fontStyle: 'bold',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
-    
-        this.deathHint = this.add.text(cx, cy + 78, 'Returning automatically in 10...', {
-            fontSize: '18px',
-            fill: '#dddddd',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
-    
-        this.returnBtn.on('pointerover', () => {
-            this.returnBtn.setFillStyle(0x2c2c2c, 1);
-        });
-    
-        this.returnBtn.on('pointerout', () => {
-            this.returnBtn.setFillStyle(0x1a1a1a, 0.9);
-        });
-    
-        this.returnBtn.on('pointerdown', () => {
-            this._returnToTitle();
-        });
-    
-        let timeLeft = 10;
-        this.deathCountdownEvent = this.time.addEvent({
-            delay: 1000,
-            repeat: 9,
-            callback: () => {
-                timeLeft--;
-                if (this.deathHint?.active) {
-                    this.deathHint.setText(`Returning automatically in ${timeLeft}...`);
-                }
+   showDeathScreen() {
+    if (this.isDeadScreenActive) return;
+    this.isDeadScreenActive = true;
+
+    this.gamePaused = true;
+    this.physics.pause();
+
+    if (this.player?.body) {
+        this.player.setVelocity(0, 0);
+    }
+
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+
+    this.deathOverlay = this.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.55)
+        .setScrollFactor(0)
+        .setDepth(200);
+
+    this.deathTitle = this.add.text(cx, cy - 70, 'YOU DIED', {
+        fontSize: '64px',
+        fill: '#d01818',
+        stroke: '#000000',
+        strokeThickness: 6,
+        fontStyle: 'bold',
+        fontFamily: 'serif'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+
+    this.returnBtn = this.add.rectangle(cx, cy + 18, 320, 62, 0x1a1a1a, 0.9)
+        .setStrokeStyle(3, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(201);
+
+    this.returnBtnText = this.add.text(cx, cy + 18, 'RETRY FROM CHECKPOINT', {
+        fontSize: '24px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        fontFamily: 'monospace'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+    this.deathHint = this.add.text(cx, cy + 78, 'Retrying automatically in 10...', {
+        fontSize: '18px',
+        fill: '#dddddd',
+        stroke: '#000000',
+        strokeThickness: 3,
+        fontFamily: 'monospace'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+    this.returnBtn.on('pointerover', () => {
+        this.returnBtn.setFillStyle(0x2c2c2c, 1);
+    });
+
+    this.returnBtn.on('pointerout', () => {
+        this.returnBtn.setFillStyle(0x1a1a1a, 0.9);
+    });
+
+    this.returnBtn.on('pointerdown', () => {
+        this.returnToTitle();
+    });
+
+    let timeLeft = 10;
+    this.deathCountdownEvent = this.time.addEvent({
+        delay: 1000,
+        repeat: 9,
+        callback: () => {
+            timeLeft--;
+            if (this.deathHint?.active) {
+                this.deathHint.setText(`Retrying automatically in ${timeLeft}...`);
             }
-        });
-    
-        this.deathReturnTimer = this.time.delayedCall(10000, () => {
-            this._returnToTitle();
-        });
-    }
-    _returnToTitle() {
-        if (this._isReturningToTitle) return;
-        this._isReturningToTitle = true;
-    
-        if (this.deathCountdownEvent) {
-            this.deathCountdownEvent.remove();
-            this.deathCountdownEvent = null;
         }
-    
-        if (this.deathReturnTimer) {
-            this.deathReturnTimer.remove();
-            this.deathReturnTimer = null;
-        }
-    
-        this.cameras.main.fadeOut(350, 0, 0, 0);
-    
-        this.time.delayedCall(360, () => {
-            this.scene.start('BossFightScene');
-        });
+    });
+
+    this.deathReturnTimer = this.time.delayedCall(10000, () => {
+        this.returnToTitle();
+    });
+}
+
+returnToTitle() {
+    if (this.isReturningToTitle) return;
+    this.isReturningToTitle = true;
+
+    if (this.deathCountdownEvent) {
+        this.deathCountdownEvent.remove();
+        this.deathCountdownEvent = null;
     }
+
+    if (this.deathReturnTimer) {
+        this.deathReturnTimer.remove();
+        this.deathReturnTimer = null;
+    }
+
+    this.cameras.main.fadeOut(350, 0, 0, 0);
+
+    this.time.delayedCall(360, () => {
+        this.scene.restart({ checkpoint: 'boss' });
+    });
+}
     // ─────────────────────────────────────────────────────────────────────────
         // ⚡ REWORKED: Strike of Judgement (Faster, Auto-release at Round 8)
         // ─────────────────────────────────────────────────────────────────────────
