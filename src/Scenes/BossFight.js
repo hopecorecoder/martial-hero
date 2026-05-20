@@ -2828,7 +2828,7 @@ _clearBossFightState() {
     this.judgementCooldown = 0;
 
     this.physics.resume();
-},
+}
 
 _resetToBossCheckpoint() {
     this._clearBossFightState();
@@ -2861,7 +2861,7 @@ _resetToBossCheckpoint() {
     this.time.delayedCall(500, () => {
         this._startIntro();
     });
-},
+}
 
 retryFromCheckpoint() {
     if (this.isRetryingFromCheckpoint) return;
@@ -2874,7 +2874,7 @@ retryFromCheckpoint() {
         this.cameras.main.fadeIn(250, 0, 0, 0);
         this.isRetryingFromCheckpoint = false;
     });
-},
+}
 
 showDeathScreen() {
     if (this.isDeadScreenActive) return;
